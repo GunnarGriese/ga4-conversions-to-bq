@@ -1,0 +1,2 @@
+google-analytics-admin
+google-cloud-bigquery
