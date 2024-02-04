@@ -1,20 +1,22 @@
+import os
+from dotenv import load_dotenv
 import time
 import datetime
 
 from google.cloud import bigquery
 from google.analytics.admin import AnalyticsAdminServiceClient
 
+# Load environment variables from .env file
+load_dotenv()
+
 # GA4 settings
 ga4_client = AnalyticsAdminServiceClient()
-property_list = [
-    "250400352", # 📠 GA4 - gunnargriese.com (prod)
-    "401777267", # 📠 GA4 - gunnargriese.com (internal traffic)
-
-]
+property_list_str = os.getenv('GA4_PROPERTY_LIST', '')
+property_list = property_list_str.split(',')
 
 # BQ settings
-PROJECT_ID = "nlp-api-test-260216"
-TABLE_ID = "nlp-api-test-260216.analytics_conversions.ga4_conversions"
+PROJECT_ID = os.getenv('GCP_PROJECT_ID')
+TABLE_ID = os.getenv('GCP_TABLE_ID')
 bq_client = bigquery.Client(project=PROJECT_ID)
 bq_schema = [
             bigquery.SchemaField("date", "DATE", mode="REQUIRED"),
@@ -78,7 +80,7 @@ def main(request):
     end_time = time.time()
     print(f"Execution finished. Duration: {end_time - start_time} seconds.")
     
-    return (200, "Success")
+    return ("Success", 200)
 
 if __name__ == "__main__":
     main(None)
