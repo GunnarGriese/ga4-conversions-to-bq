@@ -1,2 +1,1 @@
-gcloud init
-gcloud functions deploy ga4-conversions-to-b --region europe-west1 --entry-point main --trigger-http --runtime python39 --ingress-settings internal-only --timeout 540s
+gcloud functions deploy ga4-conversions-to-bq --runtime python39 --trigger-http --env-vars-file .env.yaml --region europe-west1 --entry-point main --timeout 540s --ingress-settings all
