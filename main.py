@@ -33,19 +33,21 @@ def get_ga4_conversions(property_id, conversion_results):
 
     ga4_resp = ga4_client.list_conversion_events(parent=f"properties/{property_id}")
     for conversion_event in ga4_resp:
+        print(conversion_event.create_time.isoformat())
         conversion_results.append(
             {
                 "date": today,
                 "property_id": property_id,
                 "conversion_api_name": conversion_event.name,
                 "event_name": conversion_event.event_name,
-                "create_time": datetime.datetime.fromisoformat(conversion_event.create_time.isoformat()).isoformat(),
+                "create_time": conversion_event.create_time.isoformat(),
                 "counting_method": conversion_event.counting_method.name,
             }
         )
-    return
+    return conversion_results
 
 def bq_upload(data):
+    success = False
     # Check for table and create if it doesn't exist
     print(data)
     try:
@@ -60,12 +62,13 @@ def bq_upload(data):
         schema=bq_schema,
         write_disposition="WRITE_APPEND",
     )
-    print(f"Uploading {len(data)} rows to {TABLE_ID}.")
     job = bq_client.load_table_from_json(data, TABLE_ID, job_config=job_config)
     job.result()
     print("Uploaded {} rows to {}.".format(job.output_rows, TABLE_ID))
+
+    success = True
     
-    return
+    return success
 
 def main(request):
     start_time = time.time()
@@ -84,6 +87,5 @@ def main(request):
 
 if __name__ == "__main__":
     main(None)
-    print("Done.")
 
 
