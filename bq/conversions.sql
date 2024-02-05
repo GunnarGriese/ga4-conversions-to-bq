@@ -1,3 +1,7 @@
+DECLARE start_date STRING DEFAULT '202402001';
+
+DECLARE end_date STRING DEFAULT '20240204';
+
 CREATE TEMP FUNCTION ga4EventParams(
     parameter_key_to_be_queried STRING,
     event_params ARRAY < STRUCT < KEY STRING,
@@ -28,42 +32,73 @@ CREATE TEMP FUNCTION ga4EventParams(
     )
 );
 
-WITH conversions as (
+WITH once_per_event_conversions AS (
     SELECT
         DISTINCT event_name
     FROM
         `nlp-api-test-260216.analytics_conversions.ga4_conversions`
+    WHERE
+        property_id = '250400352'
+        AND counting_method = 'ONCE_PER_EVENT'
+),
+once_per_session_conversions AS (
+    SELECT
+        DISTINCT event_name
+    FROM
+        `nlp-api-test-260216.analytics_conversions.ga4_conversions`
+    WHERE
+        property_id = '250400352'
+        AND counting_method = 'ONCE_PER_SESSION'
+),
+session_info AS (
+    SELECT
+        user_pseudo_id,
+        ga4EventParams('ga_session_id', event_params).value AS session_id,
+        EXTRACT(
+            DATE
+            FROM
+                TIMESTAMP_MICROS(event_timestamp) AT TIME ZONE "Europe/Copenhagen"
+        ) AS day,
+        COUNTIF(
+            event_name IN (
+                SELECT
+                    event_name
+                FROM
+                    once_per_session_conversions
+            )
+        ) > 0 AS has_session_conversion
+    FROM
+        `nlp-api-test-260216.analytics_250400352.events_*`
+    WHERE
+        REGEXP_EXTRACT(_table_suffix, '[0-9]+') BETWEEN start_date
+        AND end_date
+    GROUP BY
+        user_pseudo_id,
+        session_id,
+        day
 )
 SELECT
-    EXTRACT(
-        DATE
-        FROM
-            TIMESTAMP_MICROS(event_timestamp) AT TIME ZONE "Europe/Copenhagen"
-    ) as day,
-    COUNT(DISTINCT user_pseudo_id) users,
-    COUNT(
-        DISTINCT CONCAT(
-            user_pseudo_id,
-            ga4EventParams('ga_session_id', event_params).value
-        )
-    ) sessions,
-    COUNTIF(event_name = 'page_view') as page_views,
+    day,
+    COUNT(DISTINCT s.user_pseudo_id) AS users,
+    COUNT(DISTINCT CONCAT(s.user_pseudo_id, session_id)) AS sessions,
+    COUNTIF(event_name = 'page_view') AS page_views,
     COUNTIF(
-        event_name in (
+        event_name IN (
             SELECT
                 event_name
             FROM
-                conversions
+                once_per_event_conversions
         )
-    ) as conversions,
-    COUNT(*) as total_events
+    ) AS conversions,
+    SUM(IF(has_session_conversion, 1, 0)) AS session_conversions,
+    COUNT(*) AS total_events
 FROM
-    `nlp-api-test-260216.analytics_250400352.events_*`
-WHERE
-    REGEXP_EXTRACT(_table_suffix, '[0-9]+') BETWEEN '20240104'
-    AND '20240204'
-    AND ga4EventParams('page_location', event_params).value NOT LIKE '%gtm_debug%'
+    session_info as s
+    JOIN `nlp-api-test-260216.analytics_250400352.events_*` as e ON CONCAT(s.user_pseudo_id, session_id) = CONCAT(
+        e.user_pseudo_id,
+        ga4EventParams('ga_session_id', event_params).value
+    )
 GROUP BY
-    1
+    day
 ORDER BY
-    1 ASC;
+    day ASC;

@@ -1,0 +1,1 @@
+gcloud scheduler jobs create http your-job-name --schedule "0 0 * * *" --uri "https://<your-region-your-project-id>.cloudfunctions.net/<your-function-name>" --http-method GET --time-zone "Europe/Copenhagen"
