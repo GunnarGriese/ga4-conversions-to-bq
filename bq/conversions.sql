@@ -32,25 +32,18 @@ CREATE TEMP FUNCTION ga4EventParams(
     )
 );
 
-WITH once_per_event_conversions AS (
+WITH conversions AS (
+    --
     SELECT
-        DISTINCT event_name
+        DISTINCT event_name,
+        counting_method
     FROM
         `nlp-api-test-260216.analytics_conversions.ga4_conversions`
     WHERE
         property_id = '250400352'
-        AND counting_method = 'ONCE_PER_EVENT'
-),
-once_per_session_conversions AS (
-    SELECT
-        DISTINCT event_name
-    FROM
-        `nlp-api-test-260216.analytics_conversions.ga4_conversions`
-    WHERE
-        property_id = '250400352'
-        AND counting_method = 'ONCE_PER_SESSION'
 ),
 session_info AS (
+    -- calculate session-level conversions
     SELECT
         user_pseudo_id,
         ga4EventParams('ga_session_id', event_params).value AS session_id,
@@ -64,7 +57,9 @@ session_info AS (
                 SELECT
                     event_name
                 FROM
-                    once_per_session_conversions
+                    conversions
+                WHERE
+                    counting_method = 'ONCE_PER_SESSION'
             )
         ) > 0 AS has_session_conversion
     FROM
@@ -87,13 +82,16 @@ SELECT
             SELECT
                 event_name
             FROM
-                once_per_event_conversions
+                conversions
+            WHERE
+                counting_method = 'ONCE_PER_EVENT'
         )
     ) AS conversions,
+    -- calculate event-level conversions
     SUM(IF(has_session_conversion, 1, 0)) AS session_conversions,
     COUNT(*) AS total_events
 FROM
-    session_info as s
+    session_info as s -- join event- and session-level conversions
     JOIN `nlp-api-test-260216.analytics_250400352.events_*` as e ON CONCAT(s.user_pseudo_id, session_id) = CONCAT(
         e.user_pseudo_id,
         ga4EventParams('ga_session_id', event_params).value
