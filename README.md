@@ -11,7 +11,7 @@ This repository contains a Python script that uses the Google Analytics Admin AP
 ## Setup
 
 1. Enable the Google Analytics Admin API in the Google Cloud Console.
-2. Add the Compute Engine default service account (`<your-project-id>-compute@developer.gserviceaccount.com`) as a user in the GA4 property with the "Viewer" permission.
+2. Add the App Engine default service account (`<your-project-id>@appspot.gserviceaccount.com`) as a user in the GA4 property with the "Viewer" permission (assuming using a Gen 1 function).
 3. Add a `.env.yaml` file to include the following environment variables:
 
 ```yaml
@@ -20,7 +20,7 @@ GCP_TABLE_ID: <your-project-id>.<your-dataset-id>.<your-table-id>>
 GA4_PROPERTY_LIST: "123456789, 345678901" # Comma-separated list of GA4 property IDs to fetch the conversion metadata from
 ```
 
-4. Deploy the `main.py` script to a Cloud Function using the `/clf/deploy-clf.sh` script:
+4. Deploy the `main.py` script to a Cloud Function using the `/clf/deploy-clf.sh` script (using Gen 1):
 
 ```bash
 gcloud functions deploy your-function-name --runtime python39 --trigger-http --env-vars-file .env.yaml --region your-region --entry-point main --timeout 540s --ingress-settings all --gen2
