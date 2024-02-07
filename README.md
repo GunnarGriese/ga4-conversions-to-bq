@@ -29,7 +29,7 @@ gcloud functions deploy your-function-name --runtime python39 --trigger-http --e
 5. Schedule the Cloud Function to run at regular intervals via Cloud Scheduler using the `/cls/deploy-cls.sh` script:
 
 ```bash
-gcloud scheduler jobs create http your-job-name --schedule "0 0 * * *" --uri "https://<your-region-your-project-id>.cloudfunctions.net/<your-function-name>" --http-method GET --time-zone "Europe/Copenhagen"
+gcloud scheduler jobs create http your-job-name --schedule "0 0 * * *" --uri "https://<your-region-your-project-id>.cloudfunctions.net/<your-function-name>" --http-method GET --time-zone <your-timezone> --location <your-region>
 ```
 
 ## Usage
