@@ -19,13 +19,17 @@ PROJECT_ID = os.getenv('GCP_PROJECT_ID')
 TABLE_ID = os.getenv('GCP_TABLE_ID')
 bq_client = bigquery.Client(project=PROJECT_ID)
 bq_schema = [
-            bigquery.SchemaField("date", "DATE", mode="REQUIRED"),
-            bigquery.SchemaField("property_id", "STRING"),
-            bigquery.SchemaField("conversion_api_name", "STRING"),
-            bigquery.SchemaField("event_name", "STRING"),
-            bigquery.SchemaField("create_time", "TIMESTAMP"),
-            bigquery.SchemaField("counting_method", "STRING"),
-        ]
+    bigquery.SchemaField("date", "DATE", mode="REQUIRED"),
+    bigquery.SchemaField("property_id", "STRING"),
+    bigquery.SchemaField("conversion_api_name", "STRING"),
+    bigquery.SchemaField("event_name", "STRING"),
+    bigquery.SchemaField("custom_event", "BOOL"),
+    bigquery.SchemaField("deletable", "BOOL"),
+    bigquery.SchemaField("create_time", "TIMESTAMP"),
+    bigquery.SchemaField("counting_method", "STRING"),
+    bigquery.SchemaField("default_conversion_value", "FLOAT"),
+    bigquery.SchemaField("default_conversion_value_currency_code", "STRING"),
+]
 
 def get_ga4_conversions(property_id, conversion_results):
 
@@ -33,17 +37,23 @@ def get_ga4_conversions(property_id, conversion_results):
 
     ga4_resp = ga4_client.list_conversion_events(parent=f"properties/{property_id}")
     for conversion_event in ga4_resp:
-        print(conversion_event.create_time.isoformat())
-        conversion_results.append(
-            {
-                "date": today,
-                "property_id": property_id,
-                "conversion_api_name": conversion_event.name,
-                "event_name": conversion_event.event_name,
-                "create_time": conversion_event.create_time.isoformat(),
-                "counting_method": conversion_event.counting_method.name,
-            }
-        )
+        conv = {
+            "date": today,
+            "property_id": property_id,
+            "conversion_api_name": conversion_event.name,
+            "event_name": conversion_event.event_name,
+            "custom_event": conversion_event.custom,
+            "deletable": conversion_event.deletable,
+            "create_time": conversion_event.create_time.isoformat(),
+            "counting_method": conversion_event.counting_method.name,
+            "default_conversion_value": None,
+            "default_conversion_value_currency_code": None,
+        }
+        if conversion_event.default_conversion_value:
+            conv["default_conversion_value"] = conversion_event.default_conversion_value.value
+            conv["default_conversion_value_currency_code"] = conversion_event.default_conversion_value.currency_code
+        
+        conversion_results.append(conv)
     return conversion_results
 
 def bq_upload(data):
@@ -69,6 +79,7 @@ def bq_upload(data):
     success = True
     
     return success
+
 
 def main(request):
     start_time = time.time()
