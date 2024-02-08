@@ -2,6 +2,8 @@
 
 This repository contains a Python script that uses the Google Analytics Admin API to pull conversion data from Google Analytics 4 (GA4) and load it into BigQuery.
 
+Read my full blog post [here](https://gunnargriese.com) for more information.
+
 ## Prerequisites
 
 1. A Google Analytics 4 (GA4) property.
@@ -49,4 +51,8 @@ The Cloud Function will run at the scheduled intervals and pull the conversion d
 
 This table can be joined with your GA4 event data to analyze the performance of your conversions. See the `/bq/conversions.sql` file for an example query. Please note that the `counting_method` column affects how the conversion data is counted and should be taken into account when analyzing the data.
 
-Read my full blog post [here](https://gunnargriese.com) for more information.
+## Troubleshooting the Initial Setup
+
+1. Make sure to add the App Engine default service account (`<your-project-id>@appspot.gserviceaccount.com`) as a user in the GA4 property with the "Viewer" permission. This is necessary for the Cloud Function to access the GA4 property.
+
+2. Cloud Functions Gen 1 vs. Gen 2: The code provided in the repository is for Cloud Functions Gen 1. If you want to use Gen 2, you have to adjust the Cloud Scheduler intefration and the Service Account used for the Cloud Function. Gen 2 Cloud Functions use the Compute Engine default service account, whereas Gen 1 Cloud Functions use the App Engine default service account. The code for the Cloud Function itself should work without any changes.
